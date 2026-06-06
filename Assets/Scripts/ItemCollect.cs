@@ -1,35 +1,47 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using static GameManager;
 
 public class ItemCollect : MonoBehaviour
 {
-
-    private int Cherries;
     [SerializeField] public Text cherriesText;
     [SerializeField] private AudioSource collectSoundEffect;
 
-
     private void Start()
     {
-        Cherries = GameManager.Instance.score;
-        cherriesText.color = Color.blue;
-        cherriesText.text = "Cherries: " + Cherries;
+        RefreshScoreText();
     }
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
+        CollectibleItem collectible = collision.GetComponent<CollectibleItem>();
+        if (collectible != null)
+        {
+            collectible.ApplyBonus(gameObject);
+            Collect(collision.gameObject, collectible.ScoreValue);
+            return;
+        }
+
         if (collision.gameObject.CompareTag("Cherry"))
-        {   
-            collectSoundEffect.Play();  
-            Destroy(collision.gameObject);
-            Cherries++;
-            cherriesText.text = "Cherries: " + Cherries;
-            GameManager.Instance.score = Cherries;
-
-
+        {
+            Collect(collision.gameObject, 1);
         }
     }
 
+    public void Collect(GameObject item, int scoreValue)
+    {
+        collectSoundEffect?.Play();
+        GameManager.Instance.AddScore(scoreValue);
+        RefreshScoreText();
+        Destroy(item);
+    }
+
+    public void RefreshScoreText()
+    {
+        if (cherriesText == null)
+        {
+            return;
+        }
+
+        cherriesText.text = "Cherries: " + GameManager.Instance.score;
+    }
 }

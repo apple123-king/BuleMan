@@ -1,30 +1,26 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using static GameManager;
 
 public class CheckPoint : MonoBehaviour
 {
-    // Start is called before the first frame update
-    //[SerializeField] private int Leveindex;
     [SerializeField] private AudioSource checkPointSoundEffect;
-    private bool IsCompleted = false;
+    [SerializeField] private float nextLevelDelay = 5f;
+
+    private bool isCompleted = false;
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.gameObject.CompareTag("Player")&&!IsCompleted)
+        if (collision.gameObject.CompareTag("Player") && !isCompleted)
         {
-            IsCompleted = true;
-            checkPointSoundEffect.Play();
-            GameManager.Instance.currentLevel++;
-            Invoke("LoadNextLevel", 5f);
-            //LoadNextLevel();
+            isCompleted = true;
+            checkPointSoundEffect?.Play();
+            GameManager.Instance.AdvanceLevel();
+            Invoke(nameof(LoadNextLevel), nextLevelDelay);
         }
-        
     }
+
     private void LoadNextLevel()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);   
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
     }
 }

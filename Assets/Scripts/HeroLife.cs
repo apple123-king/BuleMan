@@ -1,65 +1,128 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using static GameManager;
 
 public class HeroLife : MonoBehaviour
 {
-
     [SerializeField] private Text lifeText;
-    private Animator animator;
+    [SerializeField] private Text LevelText;
     [SerializeField] private AudioSource deathSoundEffect;
     [SerializeField] private GameObject BornPoint;
-    [SerializeField] private Text LevelText;
-    private int currentLevel;
-    private int life;
+    [SerializeField] private float rebornDelay = 0.3f;
+    [SerializeField] private float invincibleAfterHit = 0.8f;
+
+    private Animator animator;
+    private bool isInvincible;
+    private Vector3 spawnPosition;
 
     private void Start()
-    {   
-        lifeText.color = Color.blue;
-        life= GameManager.Instance.life;
-        lifeText.text = "Remaining Life:" + life;
+    {
+        animator = GetComponent<Animator>();
 
-        animator= GetComponent<Animator>();
-        
-        currentLevel = GameManager.Instance.currentLevel;
-        LevelText.color = Color.blue;
-        LevelText.text = "Level:" + currentLevel;
+        if (BornPoint != null)
+        {
+            spawnPosition = BornPoint.transform.position;
+        }
+        else
+        {
+            spawnPosition = transform.position;
+        }
+
+        EnsureLevelNumber();
+        RefreshHud();
     }
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.gameObject.CompareTag("Trap"))
         {
-            deathSoundEffect.Play();
-            DeathAndReborn();
+            TakeDamage(1);
         }
-    }
-    void DeathAndReborn()
-    {
-        life--;
-        if (life < 0)
-        {
-            animator.SetTrigger("IsDeath");
-            Invoke("Empty", 1f);
-            SceneManager.LoadScene(GameManager.Instance.MaxLevel + 2);
-        }
-        else
-        {
-            GameManager.Instance.life = life;
-            lifeText.text = "Remaining Life:" + life;
-            animator.SetTrigger("IsDeath");
-            Invoke("ReBorn", 0.3f);
-        }
-    }
-    void ReBorn()
-    {
-        animator.SetTrigger("IsBorn");
-        transform.position = BornPoint.transform.position;
     }
 
+    public void TakeDamage(int amount)
+    {
+        if (isInvincible)
+        {
+            return;
+        }
 
-    void Empty() { } //用于延迟时间
+        isInvincible = true;
+        deathSoundEffect?.Play();
+
+        if (!GameManager.Instance.SpendLife(amount))
+        {
+            animator?.SetTrigger("IsDeath");
+            Invoke(nameof(LoadDefeat), 1f);
+            return;
+        }
+
+        RefreshHud();
+        animator?.SetTrigger("IsDeath");
+        Invoke(nameof(ReBorn), rebornDelay);
+    }
+
+    public void AddLife(int amount)
+    {
+        GameManager.Instance.AddLife(amount);
+        RefreshHud();
+    }
+
+    public void SetBornPoint(Vector3 position)
+    {
+        spawnPosition = position;
+    }
+
+    public void GrantInvincibility(float duration)
+    {
+        isInvincible = true;
+        CancelInvoke(nameof(ClearInvincible));
+        Invoke(nameof(ClearInvincible), Mathf.Max(0f, duration));
+    }
+
+    public void RefreshHud()
+    {
+        if (lifeText != null)
+        {
+            lifeText.text = "Life: " + GameManager.Instance.life;
+        }
+
+        if (LevelText != null)
+        {
+            LevelText.text = "Level: " + GameManager.Instance.currentLevel;
+        }
+    }
+
+    private void ReBorn()
+    {
+        animator?.SetTrigger("IsBorn");
+
+        transform.position = spawnPosition;
+
+        Invoke(nameof(ClearInvincible), invincibleAfterHit);
+    }
+
+    private void ClearInvincible()
+    {
+        isInvincible = false;
+    }
+
+    private void LoadDefeat()
+    {
+        SceneManager.LoadScene(GameManager.Instance.DefeatSceneBuildIndex);
+    }
+
+    private void EnsureLevelNumber()
+    {
+        if (GameManager.Instance.currentLevel > 0)
+        {
+            return;
+        }
+
+        int buildIndex = SceneManager.GetActiveScene().buildIndex;
+        if (buildIndex >= GameManager.Instance.firstLevelBuildIndex)
+        {
+            GameManager.Instance.currentLevel = buildIndex - GameManager.Instance.firstLevelBuildIndex + 1;
+        }
+    }
 }
-

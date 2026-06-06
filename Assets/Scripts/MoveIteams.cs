@@ -1,64 +1,57 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class MoveIteams : MonoBehaviour
 {
-    //// Start is called before the first frame update
-    //[SerializeField] private float speed=10f;
-    //[SerializeField] GameObject Point1;
-    //[SerializeField] GameObject Point2;
-    //[SerializeField] private Rigidbody2D rb;
-    //private float checkDistance = 0.2f; // 检测距离，可以根据需要调整
-
-    //void Start()
-    //{
-    //    rb=GetComponent<Rigidbody2D>();
-    //    if (rb == null)
-    //    {
-    //        print("Rigidbody2D component not found on " + gameObject.name);
-    //    }
-    //}
-
-    //// Update is called once per frame
-    //void Update()
-    //{
-    //    //if (transform.position==Point1.transform.position)
-    //    //{
-    //    //   rb.velocity=new Vector2(0,-speed);
-    //    //}
-    //    //if (transform.position==Point2.transform.position)
-    //    //{
-    //    //    rb.velocity=new Vector2(0,speed);
-    //    //}
-    //    if (Vector2.Distance(transform.position, Point1.transform.position) < checkDistance)
-    //    {
-    //        rb.velocity = new Vector2(speed,0);
-    //    }
-    //    // 检测是否到达Point2（下边界）
-    //    else if (Vector2.Distance(transform.position, Point2.transform.position) < checkDistance)
-    //    {
-    //        rb.velocity = new Vector2(-speed,0);
-    //    }
-    //}
-
     [SerializeField] private GameObject[] wayPoints;
     [SerializeField] public float speed = 2f;
+    [SerializeField] private bool reverseAtEnds;
+
     private int currentWayPointIndex = 0;
+    private int direction = 1;
+
+    public void Configure(GameObject[] points, float moveSpeed, bool shouldReverseAtEnds)
+    {
+        wayPoints = points;
+        speed = moveSpeed;
+        reverseAtEnds = shouldReverseAtEnds;
+        currentWayPointIndex = 0;
+        direction = 1;
+    }
 
     private void Update()
     {
-        if(Vector2.Distance(wayPoints[currentWayPointIndex].transform.position,transform.position) < 0.1f)
+        if (wayPoints == null || wayPoints.Length == 0 || wayPoints[currentWayPointIndex] == null)
         {
-            currentWayPointIndex++;
-            if(currentWayPointIndex >= wayPoints.Length)
-            {
-                currentWayPointIndex = 0;
-            }
+            return;
         }
-        transform.position = Vector2.MoveTowards(transform.position, wayPoints[currentWayPointIndex].transform.position, speed * Time.deltaTime);
+
+        Transform target = wayPoints[currentWayPointIndex].transform;
+        if (Vector2.Distance(target.position, transform.position) < 0.1f)
+        {
+            SelectNextPoint();
+        }
+
+        target = wayPoints[currentWayPointIndex].transform;
+        transform.position = Vector2.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
     }
 
+    private void SelectNextPoint()
+    {
+        if (!reverseAtEnds || wayPoints.Length < 2)
+        {
+            currentWayPointIndex = (currentWayPointIndex + 1) % wayPoints.Length;
+            return;
+        }
 
+        if (currentWayPointIndex == wayPoints.Length - 1)
+        {
+            direction = -1;
+        }
+        else if (currentWayPointIndex == 0)
+        {
+            direction = 1;
+        }
+
+        currentWayPointIndex += direction;
+    }
 }
